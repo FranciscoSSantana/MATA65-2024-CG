@@ -1,0 +1,146 @@
+// Calculando o gradiente da imagem via pós-processamento
+
+import * as THREE 				from 'three';
+	
+import { GUI } 					from 'gui';
+	
+import { EffectComposer } 		from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } 			from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } 			from 'three/addons/postprocessing/ShaderPass.js';
+import { LuminosityShader } 	from 'three/addons/shaders/LuminosityShader.js';
+import { SharpnessMaskShader }	from '/CodigoBase/SharpnessMaskShader.js';
+
+
+const gui = new GUI();
+
+let 	controls, 
+		scene,
+		camera,
+		renderer,
+		composer;
+
+const 	params = { enable 	  : true,
+                   k      	  : 1.0,
+				   canalDeCor : 'gray'
+                 };
+
+/// ***************************************************************
+/// ***                                                          **
+/// ***************************************************************
+
+function main() {
+
+	scene = new THREE.Scene();
+	renderer = new THREE.WebGLRenderer();
+	
+	renderer.setClearColor(new THREE.Color(0.0, 0.0, 0.0));
+
+	camera = new THREE.OrthographicCamera( -0.5, 0.5, 0.5, -0.5, -1.0, 1.0 );
+	scene.add( camera );
+	
+	var textureLoader = new THREE.TextureLoader().load("/Assets/Images/lena.png", onLoadTexture);
+	
+	document.getElementById("threejs-canvas").appendChild(renderer.domElement);
+
+	// Global Axis
+	var globalAxis = new THREE.AxesHelper( 1.0 );
+	scene.add( globalAxis );
+
+	gui.add( params, 'enable' ).onChange(onChangeGUI);
+    gui.add( params, 'k', 0.0, 10.0 ).onChange(onChangeGUI);
+	gui.add( params, 'canalDeCor', ['gray', 'red', 'green', 'blue', 'none'] ).onChange(onChangeGUI);
+	gui.open();
+};
+
+/// ***************************************************************
+/// ***                                                          **
+/// ***************************************************************
+
+function onLoadTexture(tex) {
+
+	if (!tex.image) 
+		console.log("ERROR: loading texture");
+	else {
+		
+		// Plane
+		var plane 			= new THREE.Mesh 	( 	new THREE.PlaneGeometry(1.0, 1.0, 20, 20), 
+													new THREE.MeshBasicMaterial( { map 	: tex }) );
+		plane.position.set(0.0, 0.0, -0.5);
+		plane.name = "Imagem";
+		scene.add( plane );	
+
+		renderer.setSize(tex.image.width, tex.image.height);
+
+		// postprocessing
+
+		composer = new EffectComposer( renderer );
+		const renderPass = new RenderPass( scene, camera );
+		composer.addPass( renderPass );
+
+		// converte a imagem para tons de cinza
+
+		const effectGrayScale = new ShaderPass( LuminosityShader );
+		composer.addPass( effectGrayScale );
+
+		// calcula e aplica a mascara de nitidez
+
+		const effectSharpness = new ShaderPass( SharpnessMaskShader );
+		effectSharpness.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
+		effectSharpness.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
+		composer.addPass( effectSharpness );
+
+		composer.render();
+		}
+};
+
+/// ***************************************************************
+/// ***                                                          **
+/// ***************************************************************
+
+function onChangeGUI() {
+
+	if ( params.enable == true) {
+        gui.controllers[1].enable();
+		gui.controllers[2].enable();
+
+		switch (params.canalDeCor) {
+			case 'gray':
+				composer.passes[1].enabled = true;
+				composer.passes[2].uniforms.canalDeCor.value = 0;
+				break;
+			
+			case 'red':
+				composer.passes[1].enabled = false;
+				composer.passes[2].uniforms.canalDeCor.value = 1;
+				break;
+			
+			case 'green':
+				composer.passes[1].enabled = false;
+				composer.passes[2].uniforms.canalDeCor.value = 2;
+				break;
+				
+			case 'blue':
+				composer.passes[1].enabled = false;
+				composer.passes[2].uniforms.canalDeCor.value = 3;
+				break;
+			
+			case 'none':
+				composer.passes[1].enabled = false;
+				composer.passes[2].uniforms.canalDeCor.value = 4;
+				break;
+
+			default:
+				break;
+		}
+
+        composer.passes[2].uniforms.k.value = params.k;
+		composer.render();
+    }
+	else {
+        gui.controllers[1].disable();
+		gui.controllers[2].disable();
+		renderer.render( scene, camera );
+    }
+}
+
+main();
