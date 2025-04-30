@@ -1,8 +1,0 @@
-Model Information:
-* title:	Triple Twist Mobius Strip
-* source:	https://sketchfab.com/3d-models/triple-twist-mobius-strip-a487696e858b4499b62409af153f3c03
-* author:	SonnyG1 (https://sketchfab.com/SonnyG1)
-
-Model License:
-* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
-* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works
